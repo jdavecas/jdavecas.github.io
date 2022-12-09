@@ -1980,7 +1980,7 @@ input, select, textarea {
 /* Box */
 
 	.box {
-		border-radius: 10.35em;
+		border-radius: 0.35em;
 		border: solid 2px #efefef;
 		margin-bottom: 2em;
 		padding: 1.5em;
@@ -2133,15 +2133,15 @@ input, select, textarea {
 				width: 100%;
 			}
 
-		.image.avatar {
+		/*.image.avatar {
 			border-radius: 100%;
-		}
+		}*/
 
 			.image.avatar:before {
 				display: none;
 			}
 
-		/*	.image.avatar img {
+			.image.avatar img {
 				border-radius: 2000%;
 				width: 500%;
 			}
