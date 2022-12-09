@@ -2130,11 +2130,11 @@ input, select, textarea {
 		}
 
 			.image.fit img {
-				width: 1000%;
+				width: 100%;
 			}
 
 		.image.avatar {
-			border-radius: 100px;
+			border-radius: 100%;
 		}
 
 			.image.avatar:before {
