@@ -2099,7 +2099,7 @@ input, select, textarea {
 			}
 
 		.image img {
-			border-radius: 10.35em;
+			border-radius: 0.35em;
 			display: block;
 		}
 
@@ -2116,7 +2116,7 @@ input, select, textarea {
 		}
 
 		.image.left, .image.right {
-			max-width: 40%;
+			max-width: 90%;
 		}
 
 			.image.left img, .image.right img {
