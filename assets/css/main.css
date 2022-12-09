@@ -2050,15 +2050,15 @@ input, select, textarea {
 			-ms-transition: opacity 0.2s ease-in-out;
 			transition: opacity 0.2s ease-in-out;
 			background: url("images/overlay.png");
-			border-radius: 0.35em;
+			border-radius: 0.55em;
 			content: '';
 			display: block;
-			height: 200%;
+			height: 100%;
 			left: 0;
 			opacity: 0.5;
 			position: absolute;
 			top: 0;
-			width: 200%;
+			width: 100%;
 		}
 
 		.image.thumb {
