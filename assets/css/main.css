@@ -2142,8 +2142,8 @@ input, select, textarea {
 			}
 
 			.image.avatar img {
-				border-radius: 50%;
-				width: 150%;
+				border-radius: 100px;
+				width: 100%;
 			}
 
 /* List */
