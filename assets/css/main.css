@@ -2120,13 +2120,13 @@ input, select, textarea {
 		}
 
 			.image.left img, .image.right img {
-				width: 1000%;
+				width: 100%;
 			}
 
 		.image.fit {
 			display: block;
 			margin: 0 0 2em 0;
-			width: 100%;
+			width: 1000%;
 		}
 
 			.image.fit img {
