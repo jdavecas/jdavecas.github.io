@@ -2134,7 +2134,7 @@ input, select, textarea {
 			}
 
 		.image.avatar {
-			border-radius: 500%;
+			border-radius: 30%;
 		}
 
 			.image.avatar:before {
@@ -2142,8 +2142,8 @@ input, select, textarea {
 			}
 
 			.image.avatar img {
-				border-radius: 30%;
-				width: 500%;
+				border-radius: 150%;
+				width: 30%;
 			}
 
 /* List */
