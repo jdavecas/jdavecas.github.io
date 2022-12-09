@@ -1980,7 +1980,7 @@ input, select, textarea {
 /* Box */
 
 	.box {
-		border-radius: 0.35em;
+		border-radius: 10.35em;
 		border: solid 2px #efefef;
 		margin-bottom: 2em;
 		padding: 1.5em;
