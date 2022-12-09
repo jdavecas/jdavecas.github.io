@@ -2116,11 +2116,11 @@ input, select, textarea {
 		}
 
 		.image.left, .image.right {
-			max-width: 90%;
+			max-width: 40%;
 		}
 
 			.image.left img, .image.right img {
-				width: 100%;
+				width: 1000%;
 			}
 
 		.image.fit {
