@@ -2625,6 +2625,7 @@ input, select, textarea {
 
 	#header strong, #header b {
 		color: #86d5f7;
+		font-weight: bold;
 	}
 
 		#header h2, #header h3, #header h4, #header h5, #header h6 {
