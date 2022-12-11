@@ -2632,12 +2632,12 @@ input, select, textarea {
 			color: #ffffff;
 		}
 
-		#header h1 {
-			color: rgba(255, 255, 255, 0.7);
-			font-size: 1.35em;
-			line-height: 1.75em;
-			margin: 0;
-		}
+	#header h1 {
+		color: rgba(240, 250, 255, 0.7);
+		font-size: 1.35em;
+		line-height: 1.75em;
+		margin: 0;
+	}
 
 		#header .image.avatar {
 			margin: 0 0 1em 0;
