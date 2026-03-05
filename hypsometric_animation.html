@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hypsometric Curve — River Cross-Section</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0a0f1a;
+    --panel: #0f1824;
+    --border: #1e3050;
+    --water-lo: #1a5c8a;
+    --water-hi: #4db8e8;
+    --bed: #5a4a32;
+    --bank: #7a6548;
+    --accent: #e8a832;
+    --scatter-lo: #2a7fc4;
+    --scatter-hi: #e8d44d;
+    --text: #c8d8e8;
+    --muted: #5a7a9a;
+    --regression: #ff6b6b;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(14px, 2vw, 18px);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+    text-align: center;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    margin-bottom: 28px;
+    text-align: center;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    width: 100%;
+    max-width: 960px;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 18px;
+    position: relative;
+  }
+
+  .panel-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+  }
+
+  .controls {
+    margin-top: 22px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  button {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 8px 20px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+
+  button:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  button.secondary {
+    border-color: var(--border);
+    color: var(--muted);
+  }
+
+  button.secondary:hover {
+    border-color: var(--muted);
+    color: var(--text);
+    background: transparent;
+  }
+
+  .speed-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  input[type=range] {
+    width: 80px;
+    accent-color: var(--accent);
+  }
+
+  .legend {
+    display: flex;
+    gap: 20px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .colorbar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .cb-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  #colorbarCanvas {
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    display: block;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .legend-line {
+    width: 20px;
+    height: 2px;
+    border-radius: 1px;
+  }
+
+  .stats {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .stat {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 8px 10px;
+  }
+
+  .stat-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  .stat-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    color: var(--text);
+    font-weight: 700;
+  }
+
+  .stat-value span {
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .toggle-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  button.tog {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.07em;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 7px 16px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+
+  button.tog:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  button.tog.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(232, 168, 50, 0.08);
+  }
+
+  .progress-bar {
+    width: 100%;
+    height: 2px;
+    background: var(--border);
+    border-radius: 1px;
+    margin-top: 16px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 1px;
+    transition: width 0.1s;
+  }
+</style>
+</head>
+<body>
+
+<h1>Hypsometric Curve</h1>
+<p class="subtitle">Width–WSE relationship in a river cross-section · SWOT observations</p>
+<div class="toggle-row">
+  <button id="gentleBtn" class="tog active">🏔 Gentle slopes → Steep curve</button>
+  <button id="steepBtn"  class="tog">🗻 Steep slopes → Gentle curve</button>
+</div>
+
+<div class="container">
+  <!-- LEFT: Cross-section -->
+  <div class="panel">
+    <div class="panel-label">River Cross-Section (Active Channel)</div>
+    <canvas id="crossCanvas" height="260"></canvas>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">WSE</div>
+        <div class="stat-value" id="wseVal">—<span> m</span></div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Width</div>
+        <div class="stat-value" id="widthVal">—<span> m</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Scatter + regression -->
+  <div class="panel">
+    <div class="panel-label">Width–WSE Scatter · Hypsometric Curve</div>
+    <canvas id="scatterCanvas" height="260"></canvas>
+    <div class="legend">
+      <div class="colorbar-wrap">
+        <span class="cb-label">Low stage</span>
+        <canvas id="colorbarCanvas" width="140" height="12"></canvas>
+        <span class="cb-label">High stage</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line" style="background: rgba(204,102,119,0.9)"></div>
+        Regression fit
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+<div class="controls">
+  <button id="playBtn">▶ Play</button>
+  <button class="secondary" id="resetBtn">↺ Reset</button>
+  <div class="speed-control">
+    Speed
+    <input type="range" id="speedSlider" min="0.3" max="3" step="0.1" value="1">
+  </div>
+</div>
+
+<script>
+// ─── SETUP ───────────────────────────────────────────────────────────────────
+const crossCanvas  = document.getElementById('crossCanvas');
+const scatterCanvas = document.getElementById('scatterCanvas');
+const cc = crossCanvas.getContext('2d');
+const sc = scatterCanvas.getContext('2d');
+
+function resize() {
+  const cw = crossCanvas.parentElement.clientWidth - 36;
+  crossCanvas.width  = cw; crossCanvas.height = 260;
+  scatterCanvas.width = cw; scatterCanvas.height = 260;
+}
+resize();
+window.addEventListener('resize', () => { resize(); drawAll(); });
+
+// ─── CROSS-SECTION GEOMETRY ──────────────────────────────────────────────────
+// Two modes:
+//  'gentle' — wide shallow bowl (gentle bank slopes)
+//             → large dW per dWSE → STEEP hypsometric curve slope
+//  'steep'  — narrow V-canyon (steep bank slopes)
+//             → small dW per dWSE → GENTLE hypsometric curve slope
+
+let channelMode = 'gentle'; // default
+
+// Smooth interpolation between keypoints using cosine easing
+function interpProfile(keypoints, x) {
+  for (let i = 0; i < keypoints.length - 1; i++) {
+    const [x0, z0] = keypoints[i];
+    const [x1, z1] = keypoints[i + 1];
+    if (x >= x0 && x <= x1) {
+      const t = (x - x0) / (x1 - x0);
+      const tc = (1 - Math.cos(t * Math.PI)) / 2; // cosine ease
+      return z0 + (z1 - z0) * tc;
+    }
+  }
+  return keypoints[keypoints.length - 1][1];
+}
+
+function crossSectionElevation(x) {
+  if (channelMode === 'gentle') {
+    // Gentle-sloped channel: wide, shallow, asymmetric
+    // Left bank: gradual slope with a mid-bank bench
+    // Thalweg offset to the right (~0.55)
+    // Right bank: slightly steeper but still gentle, small step near top
+    // → large dW/dWSE → STEEP hypsometric slope
+    const kp = [
+      [0.00, 0.78],  // left floodplain
+      [0.08, 0.72],  // left bank top starts descending
+      [0.20, 0.48],  // left mid-bank bench (slight flattening)
+      [0.28, 0.42],  // bench ends, continues down
+      [0.40, 0.18],  // approaching thalweg
+      [0.55, 0.08],  // thalweg (deepest, offset right)
+      [0.65, 0.20],  // right inner bank
+      [0.74, 0.38],  // right mid-bank, slight convexity
+      [0.82, 0.55],  // right upper bank steepens a bit
+      [0.90, 0.70],  // right bank top
+      [1.00, 0.76],  // right floodplain
+    ];
+    return interpProfile(kp, x);
+  } else {
+    // Steep-walled channel: narrow, deep, asymmetric V with a small point bar
+    // Left wall: near-vertical with tiny point bar at base
+    // Right wall: steep but with a narrow bench ~halfway up
+    // → small dW/dWSE → GENTLE hypsometric slope
+    const kp = [
+      [0.00, 0.80],  // left floodplain high
+      [0.10, 0.78],  // floodplain continues
+      [0.25, 0.75],  // left bank top, steep drop begins
+      [0.32, 0.52],  // steep left wall
+      [0.38, 0.20],  // left base, small point bar bump
+      [0.42, 0.15],  // point bar crest (slight rise)
+      [0.46, 0.09],  // thalweg left side
+      [0.50, 0.07],  // thalweg deepest
+      [0.54, 0.10],  // thalweg right side
+      [0.60, 0.30],  // steep right inner wall
+      [0.65, 0.44],  // narrow bench on right
+      [0.68, 0.42],  // bench continues (near-flat)
+      [0.72, 0.56],  // bench ends, steep again
+      [0.78, 0.73],  // right bank top
+      [0.88, 0.77],  // right floodplain
+      [1.00, 0.79],  // right edge
+    ];
+    return interpProfile(kp, x);
+  }
+}
+
+function buildProfile() {
+  profile.length = 0;
+  for (let i = 0; i <= N_PROFILE; i++) {
+    const x = i / N_PROFILE;
+    let z = crossSectionElevation(x);
+    z = Math.min(z, 0.80);
+    profile.push({ x, z });
+  }
+}
+
+// Generate bank profile points
+const N_PROFILE = 200;
+const profile = [];
+buildProfile();
+
+// WSE range (normalized)
+const WSE_MIN = 0.12;
+const WSE_MAX = 0.70;
+
+function getWidthAtWSE(wse) {
+  let left = -1, right = -1;
+  for (let i = 0; i < profile.length; i++) {
+    if (profile[i].z <= wse) {
+      if (left < 0) left = i;
+      right = i;
+    }
+  }
+  if (left < 0) return 0;
+  return (profile[right].x - profile[left].x);
+}
+
+function buildPoints() {
+  allPoints.length = 0;
+  for (let i = 0; i < N_STAGES; i++) {
+    const t = i / (N_STAGES - 1);
+    const wse = WSE_MIN + t * (WSE_MAX - WSE_MIN);
+    // Width comes DIRECTLY from cross-section geometry — this is the true signal
+    const trueWidth = getWidthAtWSE(wse);
+    // Small SWOT-realistic noise: ~1-2% of channel width for WSE, ~2% for width
+    const noise_w = (Math.random() - 0.5) * 0.018 * trueWidth;
+    const noise_z = (Math.random() - 0.5) * 0.006;
+    allPoints.push({ wse: wse + noise_z, width: Math.max(0.005, trueWidth + noise_w), t });
+  }
+}
+
+// Pre-compute all (wse, width) pairs for regression
+const N_STAGES = 60;
+const allPoints = [];
+buildPoints();
+
+// ─── ANIMATION STATE ─────────────────────────────────────────────────────────
+let currentPoint = 0;
+let animating = false;
+let animId = null;
+let lastTime = null;
+let speed = 1.0;
+let accumTime = 0;
+const POINT_INTERVAL = 320; // ms per point at speed=1
+
+const playBtn = document.getElementById('playBtn');
+const resetBtn = document.getElementById('resetBtn');
+const speedSlider = document.getElementById('speedSlider');
+
+// ─── DRAWING HELPERS ─────────────────────────────────────────────────────────
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+// Colorblind-safe palette: viridis-inspired stops
+// deep blue → teal → green → yellow  (safe for deuteranopia/protanopia)
+const CMAP = [
+  [68,  1,  84],   // 0.0  deep purple-blue
+  [59,  82, 139],  // 0.2  blue
+  [33, 145, 140],  // 0.4  teal
+  [94, 201,  98],  // 0.6  green
+  [253, 231,  37], // 1.0  yellow
+];
+function colorFromT(t) {
+  t = Math.max(0, Math.min(1, t));
+  const n = CMAP.length - 1;
+  const idx = t * n;
+  const lo = Math.floor(idx), hi = Math.min(lo + 1, n);
+  const f = idx - lo;
+  const c0 = CMAP[lo], c1 = CMAP[hi];
+  const r = Math.round(c0[0] + (c1[0]-c0[0]) * f);
+  const g = Math.round(c0[1] + (c1[1]-c0[1]) * f);
+  const b = Math.round(c0[2] + (c1[2]-c0[2]) * f);
+  return `rgb(${r},${g},${b})`;
+}
+
+// ─── DRAW CROSS-SECTION ──────────────────────────────────────────────────────
+function drawCross(wse, t_current) {
+  const W = crossCanvas.width, H = crossCanvas.height;
+  cc.clearRect(0, 0, W, H);
+
+  const PAD_L = 50, PAD_R = 20, PAD_T = 20, PAD_B = 40;
+  const plotW = W - PAD_L - PAD_R;
+  const plotH = H - PAD_T - PAD_B;
+
+  // Map normalized coords to canvas
+  function cx(x) { return PAD_L + x * plotW; }
+  function cy(z) { return PAD_T + (1 - z) * plotH; }
+
+  // ── bed / bank fill ──
+  cc.beginPath();
+  cc.moveTo(cx(0), cy(0));
+  profile.forEach(p => cc.lineTo(cx(p.x), cy(p.z)));
+  cc.lineTo(cx(1), cy(0));
+  cc.closePath();
+  const bedGrad = cc.createLinearGradient(0, cy(0.5), 0, cy(0));
+  bedGrad.addColorStop(0, '#3d2f1a');
+  bedGrad.addColorStop(1, '#6b5535');
+  cc.fillStyle = bedGrad;
+  cc.fill();
+
+  // ── bank outline ──
+  cc.beginPath();
+  profile.forEach((p, i) => i === 0 ? cc.moveTo(cx(p.x), cy(p.z)) : cc.lineTo(cx(p.x), cy(p.z)));
+  cc.strokeStyle = '#8a7250';
+  cc.lineWidth = 1.5;
+  cc.stroke();
+
+  // ── water fill (clip to cross-section) ──
+  if (wse > WSE_MIN) {
+    cc.save();
+    // Clip path: below WSE and above bed
+    cc.beginPath();
+    cc.moveTo(cx(0), cy(wse));
+    for (let i = 0; i <= N_PROFILE; i++) {
+      const p = profile[i];
+      if (p.z <= wse) {
+        cc.lineTo(cx(p.x), cy(p.z));
+      } else {
+        cc.lineTo(cx(p.x), cy(wse));
+      }
+    }
+    cc.lineTo(cx(1), cy(wse));
+    cc.closePath();
+
+    const waterGrad = cc.createLinearGradient(0, cy(wse), 0, cy(WSE_MIN));
+    const alpha = 0.75;
+    waterGrad.addColorStop(0, `rgba(77, 184, 232, ${alpha})`);
+    waterGrad.addColorStop(1, `rgba(15, 80, 140, ${alpha})`);
+    cc.fillStyle = waterGrad;
+    cc.fill();
+
+    // Water surface shimmer
+    cc.beginPath();
+    let firstWater = true;
+    for (let i = 0; i <= N_PROFILE; i++) {
+      const p = profile[i];
+      if (p.z <= wse) {
+        if (firstWater) { cc.moveTo(cx(p.x), cy(wse)); firstWater = false; }
+        else cc.lineTo(cx(p.x), cy(wse));
+      }
+    }
+    cc.strokeStyle = `rgba(180, 230, 255, 0.6)`;
+    cc.lineWidth = 1.5;
+    cc.stroke();
+    cc.restore();
+  }
+
+  // ── WSE label ──
+  if (wse > WSE_MIN) {
+    const wsePx = cy(wse);
+    cc.setLineDash([4, 4]);
+    cc.beginPath();
+    cc.moveTo(PAD_L, wsePx);
+    cc.lineTo(PAD_L + 30, wsePx);
+    cc.strokeStyle = 'rgba(232, 168, 50, 0.7)';
+    cc.lineWidth = 1;
+    cc.stroke();
+    cc.setLineDash([]);
+    cc.fillStyle = 'rgba(232, 168, 50, 0.9)';
+    cc.font = '10px Space Mono, monospace';
+    cc.fillText('WSE', PAD_L - 34, wsePx + 4);
+
+    // Width bracket
+    let left_x = -1, right_x = -1;
+    for (let i = 0; i <= N_PROFILE; i++) {
+      if (profile[i].z <= wse) {
+        if (left_x < 0) left_x = profile[i].x;
+        right_x = profile[i].x;
+      }
+    }
+    if (left_x >= 0) {
+      const bracketY = wsePx - 10;
+      cc.strokeStyle = 'rgba(200, 220, 255, 0.5)';
+      cc.lineWidth = 1;
+      cc.setLineDash([2, 3]);
+      cc.beginPath();
+      cc.moveTo(cx(left_x), bracketY + 8);
+      cc.lineTo(cx(left_x), bracketY);
+      cc.lineTo(cx(right_x), bracketY);
+      cc.lineTo(cx(right_x), bracketY + 8);
+      cc.stroke();
+      cc.setLineDash([]);
+
+      cc.fillStyle = 'rgba(200, 220, 255, 0.7)';
+      cc.font = '10px Space Mono, monospace';
+      cc.textAlign = 'center';
+      cc.fillText('W', cx((left_x + right_x) / 2), bracketY - 3);
+      cc.textAlign = 'left';
+    }
+  }
+
+  // ── Y axis (elevation) ──
+  cc.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--muted') || '#5a7a9a';
+  cc.font = '9px Space Mono, monospace';
+  cc.fillStyle = '#5a7a9a';
+  cc.textAlign = 'right';
+  for (let z = 0; z <= 1; z += 0.25) {
+    const yp = cy(z);
+    cc.fillText(z.toFixed(2), PAD_L - 6, yp + 3);
+    cc.beginPath();
+    cc.moveTo(PAD_L - 3, yp);
+    cc.lineTo(PAD_L, yp);
+    cc.strokeStyle = '#2a3a4a';
+    cc.lineWidth = 1;
+    cc.stroke();
+  }
+  cc.save();
+  cc.translate(14, H / 2);
+  cc.rotate(-Math.PI / 2);
+  cc.fillStyle = '#5a7a9a';
+  cc.font = '9px Space Mono, monospace';
+  cc.textAlign = 'center';
+  cc.fillText('ELEVATION (norm.)', 0, 0);
+  cc.restore();
+
+  // X label
+  cc.fillStyle = '#5a7a9a';
+  cc.font = '9px Space Mono, monospace';
+  cc.textAlign = 'center';
+  cc.fillText('CROSS-SECTION (x)', PAD_L + plotW / 2, H - 6);
+}
+
+// ─── DRAW SCATTER ─────────────────────────────────────────────────────────────
+function drawScatter(nPoints) {
+  const W = scatterCanvas.width, H = scatterCanvas.height;
+  sc.clearRect(0, 0, W, H);
+
+  const PAD_L = 55, PAD_R = 20, PAD_T = 20, PAD_B = 40;
+  const plotW = W - PAD_L - PAD_R;
+  const plotH = H - PAD_T - PAD_B;
+
+  // Axis extents derived from full dataset so axes stay fixed during animation
+  const allW  = allPoints.map(p => p.width);
+  const allZ  = allPoints.map(p => p.wse);
+  const w_lo  = 0;
+  const w_hi  = Math.max(...allW) * 1.12;
+  const wse_lo = Math.min(...allZ) - 0.02;
+  const wse_hi = Math.max(...allZ) + 0.02;
+
+  // X = Width,  Y = WSE  (conventional hypsometric orientation)
+  function sx(w)   { return PAD_L + (w   - w_lo)   / (w_hi   - w_lo)   * plotW; }
+  function sy(wse) { return PAD_T + plotH - (wse - wse_lo) / (wse_hi - wse_lo) * plotH; }
+
+  // ── Grid ──
+  sc.strokeStyle = '#141e2a';
+  sc.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const x = PAD_L + i * plotW / 4;
+    sc.beginPath(); sc.moveTo(x, PAD_T); sc.lineTo(x, PAD_T + plotH); sc.stroke();
+    const y = PAD_T + i * plotH / 4;
+    sc.beginPath(); sc.moveTo(PAD_L, y); sc.lineTo(PAD_L + plotW, y); sc.stroke();
+  }
+
+  // ── Axis ticks ──
+  sc.fillStyle = '#5a7a9a';
+  sc.font = '9px Space Mono, monospace';
+  // X axis: width
+  sc.textAlign = 'center';
+  for (let i = 0; i <= 4; i++) {
+    const w = w_lo + i * (w_hi - w_lo) / 4;
+    sc.fillText(w.toFixed(2), sx(w), PAD_T + plotH + 14);
+  }
+  // Y axis: WSE
+  sc.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const z = wse_lo + i * (wse_hi - wse_lo) / 4;
+    sc.fillText(z.toFixed(2), PAD_L - 6, sy(z) + 3);
+  }
+
+  // Axis labels
+  sc.textAlign = 'center';
+  sc.fillStyle = '#5a7a9a';
+  sc.font = '9px Space Mono, monospace';
+  sc.fillText('WIDTH (norm.)', PAD_L + plotW / 2, H - 6);
+  sc.save();
+  sc.translate(14, H / 2);
+  sc.rotate(-Math.PI / 2);
+  sc.fillText('WSE (norm.)', 0, 0);
+  sc.restore();
+
+  // ── Regression line: WSE = f(Width), i.e. regress wse on width ──
+  if (nPoints >= 4) {
+    const pts = allPoints.slice(0, nPoints);
+    // regress wse (y) on width (x)
+    const n = pts.length;
+    let sx_ = 0, sy_ = 0, sxy_ = 0, sxx_ = 0;
+    pts.forEach(p => { sx_ += p.width; sy_ += p.wse; sxy_ += p.width * p.wse; sxx_ += p.width * p.width; });
+    const slope = (n * sxy_ - sx_ * sy_) / (n * sxx_ - sx_ * sx_);
+    const intercept = (sy_ - slope * sx_) / n;
+
+    const x0 = w_lo, x1 = w_hi;
+    const y0 = slope * x0 + intercept;
+    const y1 = slope * x1 + intercept;
+
+    sc.beginPath();
+    sc.moveTo(sx(x0), sy(y0));
+    sc.lineTo(sx(x1), sy(y1));
+    sc.strokeStyle = 'rgba(204, 102, 119, 0.9)'; // rose — visible in all CVD types
+    sc.lineWidth = 2;
+    sc.setLineDash([6, 3]);
+    sc.stroke();
+    sc.setLineDash([]);
+
+    // R²
+    const wse_bar = pts.reduce((s, p) => s + p.wse, 0) / n;
+    const ss_res = pts.reduce((s, p) => s + Math.pow(p.wse - (slope * p.width + intercept), 2), 0);
+    const ss_tot = pts.reduce((s, p) => s + Math.pow(p.wse - wse_bar, 2), 0);
+    const r2 = ss_tot > 0 ? 1 - ss_res / ss_tot : 0;
+
+    sc.fillStyle = 'rgba(204, 102, 119, 0.9)';
+    sc.font = '10px Space Mono, monospace';
+    sc.textAlign = 'right';
+    sc.fillText(`r² = ${r2.toFixed(3)}`, PAD_L + plotW - 4, PAD_T + 14);
+  }
+
+  // ── Points ──
+  for (let i = 0; i < nPoints; i++) {
+    const p = allPoints[i];
+    const px = sx(p.width);
+    const py = sy(p.wse);
+    const col = colorFromT(p.t);
+    const isLast = (i === nPoints - 1);
+
+    sc.beginPath();
+    sc.arc(px, py, isLast ? 6 : 4, 0, Math.PI * 2);
+    sc.fillStyle = col;
+    sc.globalAlpha = isLast ? 1.0 : 0.80;
+    sc.fill();
+
+    if (isLast) {
+      sc.beginPath();
+      sc.arc(px, py, 9, 0, Math.PI * 2);
+      sc.strokeStyle = col;
+      sc.lineWidth = 1.5;
+      sc.globalAlpha = 0.45;
+      sc.stroke();
+    }
+    sc.globalAlpha = 1.0;
+  }
+}
+
+// ─── MAIN DRAW ────────────────────────────────────────────────────────────────
+function drawAll() {
+  const idx = Math.min(currentPoint, allPoints.length - 1);
+  const pt = allPoints[idx];
+  const wse = idx >= 0 ? pt.wse : WSE_MIN;
+  const t   = idx >= 0 ? pt.t   : 0;
+
+  drawCross(wse, t);
+  drawScatter(idx + 1);
+
+  // Update stats
+  document.getElementById('wseVal').innerHTML  = (wse * 10).toFixed(2) + '<span> m</span>';
+  document.getElementById('widthVal').innerHTML = (getWidthAtWSE(wse) * 200).toFixed(1) + '<span> m</span>';
+
+  // Progress
+  document.getElementById('progressFill').style.width = ((idx + 1) / allPoints.length * 100) + '%';
+}
+
+// ─── ANIMATION LOOP ───────────────────────────────────────────────────────────
+function animate(ts) {
+  if (!lastTime) lastTime = ts;
+  const dt = ts - lastTime;
+  lastTime = ts;
+
+  accumTime += dt * speed;
+  while (accumTime >= POINT_INTERVAL) {
+    accumTime -= POINT_INTERVAL;
+    currentPoint++;
+    if (currentPoint >= allPoints.length) {
+      currentPoint = allPoints.length - 1;
+      stopAnimation();
+      return;
+    }
+  }
+
+  drawAll();
+  if (animating) animId = requestAnimationFrame(animate);
+}
+
+function startAnimation() {
+  if (currentPoint >= allPoints.length - 1) {
+    currentPoint = 0;
+    accumTime = 0;
+  }
+  animating = true;
+  lastTime = null;
+  accumTime = 0;
+  playBtn.textContent = '⏸ Pause';
+  animId = requestAnimationFrame(animate);
+}
+
+function stopAnimation() {
+  animating = false;
+  if (animId) cancelAnimationFrame(animId);
+  playBtn.textContent = '▶ Play';
+}
+
+playBtn.addEventListener('click', () => {
+  if (animating) stopAnimation();
+  else startAnimation();
+});
+
+resetBtn.addEventListener('click', () => {
+  stopAnimation();
+  currentPoint = 0;
+  accumTime = 0;
+  drawAll();
+});
+
+speedSlider.addEventListener('input', () => {
+  speed = parseFloat(speedSlider.value);
+});
+
+// ─── TOGGLE ───────────────────────────────────────────────────────────────────
+document.getElementById('gentleBtn').addEventListener('click', () => {
+  channelMode = 'gentle';
+  document.getElementById('gentleBtn').classList.add('active');
+  document.getElementById('steepBtn').classList.remove('active');
+  stopAnimation();
+  buildProfile();
+  buildPoints();
+  currentPoint = 0;
+  accumTime = 0;
+  drawAll();
+});
+
+document.getElementById('steepBtn').addEventListener('click', () => {
+  channelMode = 'steep';
+  document.getElementById('steepBtn').classList.add('active');
+  document.getElementById('gentleBtn').classList.remove('active');
+  stopAnimation();
+  buildProfile();
+  buildPoints();
+  currentPoint = 0;
+  accumTime = 0;
+  drawAll();
+});
+
+// ─── COLORBAR ─────────────────────────────────────────────────────────────────
+function drawColorbar() {
+  const cb = document.getElementById('colorbarCanvas');
+  const ctx = cb.getContext('2d');
+  const W = cb.width, H = cb.height;
+  const grad = ctx.createLinearGradient(0, 0, W, 0);
+  for (let i = 0; i <= 20; i++) {
+    const t = i / 20;
+    grad.addColorStop(t, colorFromT(t));
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+currentPoint = 0;
+drawAll();
+drawColorbar();
+</script>
+</body>
+</html>
